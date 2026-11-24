@@ -31,7 +31,11 @@ export interface Config {
   requireDkim?: boolean;
   /** Stop auto-replying once a thread has bounced between agents this many times. */
   maxHops?: number;
-  /** Seconds between fallback polls when IMAP IDLE isn't delivering. */
+  /**
+   * New mail wakes the agent through IMAP IDLE: the server pushes a
+   * notification the moment a message lands. This is only a safety-net
+   * re-check for servers or networks that drop IDLE notifications.
+   */
   pollSeconds?: number;
   /** Where thread→session mappings and processed message ids are stored. */
   stateDir: string;
@@ -66,7 +70,7 @@ export function loadConfig(path = process.env.INBOXD_CONFIG ?? "inboxd.json"): C
   const base = dirname(full);
   const cfg: Config = {
     maxHops: 6,
-    pollSeconds: 60,
+    pollSeconds: 300,
     timeoutSeconds: 1800,
     requireDkim: false,
     ...raw,

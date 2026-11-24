@@ -44,14 +44,28 @@ export async function handleEmail(cfg: Config, state: State, e: Email): Promise<
 /** Pull unread mail, decide what to act on, mark it read. Agent runs happen after the IMAP lock is released. */
 async function collect(cfg: Config, state: State, client: ImapFlow): Promise<Email[]> {
   const todo: Email[] = [];
+  const dbg = (...a: unknown[]) => process.env.INBOXD_DEBUG && log("[debug]", ...a);
+  dbg("collect: waiting for lock");
   const lock = await client.getMailboxLock("INBOX");
   try {
     const uids = (await client.search({ seen: false }, { uid: true })) || [];
+    dbg("collect: unseen uids", uids);
     for (const uid of uids) {
-      const msg = await client.fetchOne(String(uid), { source: true, uid: true }, { uid: true });
-      if (!msg || !msg.source) continue;
+      let msg = await client.fetchOne(String(uid), { source: true, uid: true }, { uid: true });
+      if (!msg || !msg.source) {
+        // Some servers list a new uid in SEARCH before the open session can FETCH it. Re-select and retry once.
+        await client.mailboxOpen("INBOX");
+        msg = await client.fetchOne(String(uid), { source: true, uid: true }, { uid: true });
+      }
+      if (!msg || !msg.source) {
+        dbg(`collect: uid ${uid} fetch returned no source`);
+        continue;
+      }
       const e = await parseEmail(uid, msg.source, false);
-      if (state.isProcessed(e.messageId)) continue;
+      if (state.isProcessed(e.messageId)) {
+        dbg(`collect: uid ${uid} already processed (${e.messageId})`);
+        continue;
+      }
       state.markProcessed(e.messageId);
 
       // Leave ignored mail unread so a human looking at the inbox still sees it.

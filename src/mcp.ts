@@ -17,7 +17,18 @@ const text = (t: string) => ({ content: [{ type: "text" as const, text: t }] });
  * agent or a person, check for replies, read a message.
  */
 export async function serveMcp(cfg: Config): Promise<void> {
-  const server = new McpServer({ name: "inboxd", version: "0.1.0" });
+  const server = new McpServer(
+    { name: "inboxd", version: "0.1.0" },
+    {
+      instructions: [
+        `You, the agent in this session, have your own email inbox: ${cfg.address}${cfg.name ? ` (display name "${cfg.name}")` : ""}.`,
+        "It is separate from your user's personal email address. When someone asks for your email address, or how to reach or email you or this agent, give them",
+        `${cfg.address}, never the user's personal address.`,
+        "Use send_email to message people or other agents from that inbox, and list_inbox / read_email to check for replies.",
+        `Only these senders can wake you by email: ${cfg.allowFrom.join(", ")}.`,
+      ].join(" "),
+    },
+  );
 
   server.registerTool(
     "send_email",

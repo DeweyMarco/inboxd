@@ -8,10 +8,13 @@
   },
   "scripts": {
     "build": "tsc",
+    "prepare": "tsc",
     "dev": "tsx src/cli.ts",
     "test:e2e": "tsx test/e2e.ts"
   },
   "license": "MIT",
+  "files": ["dist", "README.md", "LICENSE"],
+  "repository": "github:DeweyMarco/inboxd",
   "engines": {
     "node": ">=20"
   },

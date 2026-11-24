@@ -27,7 +27,7 @@ export function imapClient(cfg: Config): ImapFlow {
     port: cfg.imap.port,
     secure: cfg.imap.secure,
     auth: { user: cfg.imap.user, pass: cfg.imap.pass },
-    logger: false,
+    logger: process.env.INBOXD_DEBUG ? undefined : false,
   });
 }
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { loadConfig } from "./config.js";
 import { listInbox, sendEmail } from "./mail.js";
 import { serveMcp } from "./mcp.js";
@@ -40,6 +41,35 @@ program
       ) + "\n",
     );
     console.error(`wrote ${path}; fill in your mail server and allowFrom, then run \`inboxd watch\``);
+  });
+
+program
+  .command("identity")
+  .description("write a section into CLAUDE.md and AGENTS.md telling the agent its own email address")
+  .option("-d, --dir <dir>", "agent project directory (default: agent.cwd from the config, else .)")
+  .option("-f, --files <names...>", "instruction files to update", ["CLAUDE.md", "AGENTS.md"])
+  .action((o) => {
+    const c = cfg();
+    const dir = o.dir ?? c.agent.cwd ?? ".";
+    const START = "<!-- inboxd:start -->";
+    const END = "<!-- inboxd:end -->";
+    const section = [
+      START,
+      "## Your email inbox",
+      "",
+      `You, the agent working in this directory, have your own email address: ${c.address}. It is separate from your user's personal email. When anyone asks for your email address or how to reach you, give this address, not the user's.`,
+      "",
+      "Email that arrives from an allowed sender wakes you with the message as your prompt, and your final answer is sent back as the reply. In an interactive session, use the inboxd MCP tools (send_email, list_inbox, read_email) to send mail to people or other agents and to check for replies.",
+      END,
+    ].join("\n");
+    for (const name of o.files as string[]) {
+      const path = join(dir, name);
+      const before = existsSync(path) ? readFileSync(path, "utf8") : "";
+      const re = new RegExp(`${START}[\\s\\S]*?${END}`);
+      const after = re.test(before) ? before.replace(re, section) : (before ? before.trimEnd() + "\n\n" : "") + section + "\n";
+      writeFileSync(path, after);
+      console.error(`updated ${path}`);
+    }
   });
 
 program

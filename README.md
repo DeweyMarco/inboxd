@@ -16,21 +16,23 @@ someone@x.com ──email──▶ agent inbox (IMAP) ──IDLE──▶ inboxd
 someone@x.com ◀──reply (In-Reply-To, X-Inboxd-Hop)─────┘
 ```
 
-- `inboxd watch` holds an IMAP IDLE connection, picks up unread mail, and runs the agent on each allowed message one at a time.
+- `inboxd watch` holds an IMAP IDLE connection open, so the mail server pushes a notification the instant a message lands and the agent starts right away. Nothing polls on a timer and the agent itself never checks for mail; it isn't running until an email starts it. A re-check every 5 minutes (`pollSeconds`) only covers networks that silently drop the IDLE connection.
 - Each thread (keyed by the root Message-ID) maps to one agent session. Claude Code sessions are created with `--session-id` and continued with `--resume`; Codex uses `codex exec resume <thread>`.
 - `inboxd mcp` is an MCP server with `send_email`, `list_inbox`, `read_email` and `whoami`, so an interactive session can email another agent and check for answers.
 
 ## Quick start
 
 ```sh
-git clone https://github.com/DeweyMarco/inboxd && cd inboxd
-npm install && npm run build && npm link
+npm install -g github:DeweyMarco/inboxd
 
-mkdir ~/agents/builder && cd ~/agents/builder
-inboxd init                     # writes inboxd.json
+cd ~/code/my-repo               # wherever the agent works
+inboxd init                     # writes inboxd.json; fill in mailbox + allowFrom
 export INBOXD_PASSWORD=...      # app password for the mailbox
+inboxd identity                 # tells the agent its address via CLAUDE.md + AGENTS.md
 inboxd watch
 ```
+
+`inboxd identity` matters more than it looks. Claude Code knows its user's email, so without it an agent asked "what's your email address?" tends to answer with yours. The section it writes is fenced with `<!-- inboxd:start -->` markers, so rerunning it updates the section in place.
 
 Any IMAP/SMTP mailbox works. A dedicated Fastmail or Gmail account with an app password is the fastest way to start; self-hosting with [Stalwart](https://stalw.art) or [Maddy](https://maddy.email) gives you unlimited addresses on your own domain.
 
